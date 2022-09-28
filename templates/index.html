@@ -1,0 +1,294 @@
+<!Doctype html>
+<html lang="ko">
+<head>
+<!-- Required meta tags -->
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
+
+<!-- Bootstrap CSS -->
+<link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+          integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l"
+          rel="stylesheet">
+
+<!-- JS --> 
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script> 
+<script crossorigin="anonymous"
+            integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
+            src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script> 
+<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script> 
+
+<!-- 구글폰트 Nanum Gothic Designed by Sandoll-->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap" rel="stylesheet">
+<title>Krafton Jungle Final | 나홀로 메모장 v3.0</title>
+
+<!-- style -->
+<style>
+/*전역 폰트*/
+* {
+    font-family: 'Nanum Gothic', sans-serif;
+}
+html, body {
+    height: 100%;
+}
+#name {
+    display: inline;
+}
+/*버전 정보*/
+.like {
+    color : green;
+    margin: 5px;
+}
+.dislike {
+    color: red;
+    margin : 5px;
+}
+#version {
+    display: inline;
+    background-color: #808080;
+    color: white;
+}
+.wrap {
+    width: 80%;
+    margin: auto;
+}
+.new_memo {
+    display: none;
+    margin: 31px;
+}
+.old_memo {
+    margin: 30px;
+}
+#hidden_info {
+    display: none;
+}
+/*메모 입력 폼*/
+#memo-title, #memo-contents {
+    display: block;
+    margin-top: 20px;
+    width: 600px;
+}
+.title_edit, .contents_edit {
+    width: 300px;
+    margin-bottom: 15px;
+    display: block;
+}
+#button_save {
+    display: block;
+}
+</style>
+<script>
+        //페이지 로드시 showMemo 함수 호출
+        $(document).ready(function () {
+            $("#cards-box").html("");
+            showMemo();
+        });
+
+        //메모 저장
+        function saveMemo() {
+            // alert("function called : saveMemo")
+            let title = $("#memo-title").val();
+            let contents = $("#memo-contents").val();
+            // let memo_randomid = Math.floor(Math.random()*1000);
+            let memo_randomid = Math.random();
+            // 제목,내용이 같은 경우에도 개별 메모의 식별이 가능하도록 난수 생성하여 고유 번호 부여
+            // alert(memo_randomid)
+            $.ajax({
+                type: "POST",
+                url: "/memo",
+                data: {title_give: title, contents_give: contents, id_give: memo_randomid},
+                success: function (response) {
+                    if (response["result"] === "success") {
+                        alert("메모가 저장되었습니다.");
+                        window.location.reload();
+                    } else {
+                        alert("서버 오류!")
+                    }
+                }
+            })
+        }
+
+        //Memo GET 후 요소 파싱
+        function showMemo() {
+            // alert("function called : showMemo")
+            $.ajax({
+                type: "GET",
+                url: "/memo",
+                data: {},
+                success: function (response) {
+                    let memos = response["memos"];
+                    console.log(memos);
+                    for (let i = 0; i < memos.length; i++) {
+                        makeCard(memos[i]["title"], memos[i]["contents"],memos[i]["likes"],memos[i]["script_randomid"],memos[i]["id_copy"]);
+                    }
+                }
+            })
+        }
+
+        // 템플릿 생성 함수
+        function makeCard(title, contents, likes, script_randomid, id_copy) {
+            let tempHtml =`<!--메모카드 템플릿-->
+                <div class="card">
+                    <div class="old_memo" id ="memodiv_${id_copy}">
+                    <form>
+
+                     <div id = "hidden_info">
+                        <p id = "random_id" >${script_randomid}</p>
+                        <p id = "id_copy" >${id_copy}</p>
+                     </div>
+
+                        <p id = "old_title"  class="card-title">${title}</p>
+                        <p id = "old_contents"  class="card-contents">${contents}</p>
+                        <p  class="card-contents">${likes}</p>
+                        <button onclick="hideMemo('${id_copy}')" type="button" name="button" id="button_edit" value="Button" class="btn btn-info">수정</button>
+                        <button onclick="deleteMemo('${id_copy}')" type="button" name="button" id="button_delete" value="Button" class="btn btn-danger">삭제</button>
+
+                        <a href="#" onclick="likeMemo('${id_copy}')" class="like"">좋아요!
+                            <span class="icon"><i class="fas fa-thumbs-up"></i></span>
+                        </a>
+
+                        <a href="#" onclick="dislikeMemo('${id_copy}')" class="dislike">싫어요!
+                            <span class="icon"><i class="fas fa-thumbs-down"></i></span>
+                        </a>
+
+                    </form>
+                    </div>
+
+                    <div class = "new_memo" id="editdiv_${id_copy}">
+                    <form>
+                    <input class = "title_edit" id="title_${id_copy}" type="text"  placeholder="${title}">
+                    <textarea class = "contents_edit" id="contents_${id_copy}" placeholder="${contents}"></textarea>
+                    <button onclick="memoEdit('${title}','${contents}','${id_copy}')" type="submit" name="button" id="button_save" value="Button" class="btn btn-success">저장</button>
+                    </form>
+                    </div>
+            </div>
+            <!--메모 카드 템플릿 Ends Here-->`
+            $("#cards-box").append(tempHtml);
+        }
+
+        // 메모 요소 숨기기
+        function hideMemo(id_copy) {
+            memodiv_by_id = "#memodiv_" + id_copy;
+            editdiv_by_id = "#editdiv_" + id_copy;
+            $(memodiv_by_id).hide();
+            $(editdiv_by_id).show();
+        }
+
+        // 메모 수정 요소 숨기기
+        function hideEdit(id_copy){
+            memodiv_by_id = "#memodiv_" + id_copy;
+            editdiv_by_id = "#editdiv_" + id_copy;
+            $(memodiv_by_id).show();
+            $(editdiv_by_id).hide();
+        }
+
+        // 메모 좋아요 기능
+        function likeMemo(id_copy){
+            $.ajax({
+                type: "POST",
+                url: "/api/like",
+                data: {'id_give': id_copy},
+                success: function (response) {
+                    if (response['result'] === 'success') {
+                        alert('메모 좋아요 + 1')
+                        window.location.reload()
+                    }
+                }
+            });
+        }
+
+        // 메모 싫어요 기능
+        function dislikeMemo(id_copy){
+            $.ajax({
+                type: "POST",
+                url: "/api/dislike",
+                data: {'id_give': id_copy},
+                success: function (response) {
+                    if (response['result'] === 'success') {
+                        alert('메모 싫어요 - 1')
+                        window.location.reload()
+                    }
+                }
+            });
+        }
+
+        // 메모 삭제
+        function deleteMemo(id_copy) {
+            $.ajax({
+                type: "POST",
+                url: "/api/delete",
+                data: {'id_give': id_copy},
+                success: function (response) {
+                    if (response['result'] === 'success') {
+                        alert('메모가 삭제되었습니다.')
+                        window.location.reload()
+                    }
+                }
+            });
+        }
+
+        // 메모 카드 수정 함수
+        function memoEdit(title,contents,id_copy){
+            var title_by_id = "#title_" + id_copy;
+            var contents_by_id = "#contents_" + id_copy;
+            let title_edit = $(title_by_id).val();
+            let contents_edit = $(contents_by_id).val()
+            // alert(title_edit)
+            // alert(contents_edit)
+            var title_edit_give;
+            if (!title_edit) {
+              title_edit_give = title;
+              // alert(title_edit_give)
+            } else {
+              title_edit_give = title_edit;
+              // alert(title_edit_give)
+            }
+            var contents_edit_give;
+            if (!contents_edit) {
+              contents_edit_give = contents;
+              // alert(contents_edit_give)
+            } else {
+              contents_edit_give = contents_edit;
+              // alert(contents_edit_give)
+            }
+            $.ajax({
+                type: "POST",
+                url: "/api/edit",
+                data:{'id_give':id_copy,'title_edit':title_edit_give,'contents_edit':contents_edit_give},
+                success: function (response) {
+                    if (response['result'] === 'success') {
+                        alert("메모가 수정되었습니다.")
+                        window.location.reload()
+                    } else {
+                        alert("메모 수정 오류!")
+                    }
+                }
+            })
+        hideEdit(id_copy);
+        }
+    </script>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="jumbotron">
+    <h1 class="display-4" id="name">나홀로 메모장</h1>
+    <h1 class="display-4" id="version">ver3.0</h1>
+    <p class="lead"> 
+      <!--메모 제목 입력-->
+      <input id="memo-title" name="textfield" placeholder="제목을 입력하세요" type="text">
+      <!--메모 내용 입력-->
+      <textarea id="memo-contents" name="textarea" placeholder="내용을 입력하세요"></textarea>
+    </p>
+    <!--저장버튼-->
+    <p class="lead">
+      <button class="btn btn-primary" id="button" name="button" onclick="saveMemo()" type="button" value="Button"> 저장하기 </button>
+    </p>
+  </div>
+  <div class="card-columns" id="cards-box"> 
+    <!--메모카드--> 
+  </div>
+</div>
+</body>
+</html>
